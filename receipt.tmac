@@ -1,0 +1,88 @@
+.mso hdtbl.tmac
+.nr y 1900+\n(yr
+.als    ALIAS    als
+.ALIAS    MAC    de
+.MAC CENTER
+.  brp
+.  ad c
+..
+.MAC RIGHT
+.   brp
+.   ad r
+..
+.MAC LEFT
+.   brp
+.   ad l
+..
+.MAC BOTH
+.   brp
+.   ad b
+..
+.MAC NOFILL
+.   brp
+.   nf
+..
+.MAC HEADER		\" Page header
+.  nr temp_po \\n[.o]
+.  nr header_width 6c
+.  sp |0.3c
+.  ev head		\"Start Head Environment saves all the settings fonts,alignment,linelenght etc...
+.  ll \\n[header_width]u
+.  ad c 
+.  po 0.3c
+.brp
+\fB\s(18\[u201C]Hello World\[u201D]\fR
+. brp
+. ps 12
+. vs 7
+. ss 12
+BAKERSTREET 6
+. vs 12
+. br
+. ss 4
+666  CITY-B
+. br
+.LEFT 
+Receipt
+.br
+\s9Date: \n(dy-\n(mo-\ny
+.br
+..
+.MAC FOOTER                \" Page footer
+.br
+.CENTER
+\fBTel:  0456 / 78 91 01 23
+.br
+\fBmail: wim@thinkerwim.org
+. br
+.tm \\n[nl]
+..
+.MAC START
+.  PAGESETUP
+.  TABLESTART
+..
+.MAC PAGESETUP
+.   nr pagewidth 7c
+.   ll 6.6c
+.   po .22c
+.   HEADER            
+..
+.MAC TABLESTART
+.TBL hal=c val=m bgc=white fgc=black bc=black border=0.3n cols=4 fsz=0.8 cpd=0.3n csp=0.3n
+.TR .TD "Product" .TD "Quantity" .TD "U.Price" .TD "Price" 
+..
+.MAC RECEIPTLINE
+.TR .TD "\\$1" .TD "\\$2" .TD "\\$3" .TD "\\$4"
+..
+.MAC RECEIPTTOTAL
+.ds T*ICKETTOTAAL \\$1
+.TABLEEND
+..
+.MAC TABLEEND
+.TR fsz=0.9 hal=r
+.TD colspan=2 "\fBTOTAL: " 
+.TD colspan=2 "\fB\[Eu]  \\*[T*ICKETTOTAAL]"
+.ETB
+.FOOTER
+..
+.START
