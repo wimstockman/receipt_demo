@@ -13,40 +13,50 @@ class RLine : public FWidget
 {
 	public: explicit RLine (FWidget* parent):FWidget{parent}{}
 
+   	auto getClassName() const -> FString  override  { return "RLine";} 
 	FLineEdit Product{this};
 	FLineEdit Quantity{this};
 	FLineEdit UnitPrice{this};
 	FLineEdit TotalPrice{this};
+	int RowId;
 
 	void initLayout() override 
 	{
-		int posx = 1;
-		int posy = 1;
-		unsigned long int sizex = 10;
-		unsigned long int sizey = 1;
-		Product.setGeometry(FPoint{posx,posy},FSize{sizex*2,sizey});
 		Product.unsetShadow();
 		Product.setAlignment(Align::Left);
 		Product.addCallback("focus-out",this,&RLine::cb_uppercase,&Product);
-		posx+=22;
-		Quantity.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
 		Quantity.unsetShadow();
 		Quantity.setInputFilter("[0-9]");
 		Quantity.setAlignment(Align::Right);
-		posx+=12;
-		UnitPrice.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
 		UnitPrice.unsetShadow();
 		UnitPrice.setInputFilter("[.0-9]");
 		UnitPrice.setAlignment(Align::Right);
 		UnitPrice.addCallback("focus-out",this,&RLine::cb_setprecision,&UnitPrice);
-		posx+=12;
-		TotalPrice.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
 		TotalPrice.unsetShadow();
 		TotalPrice.setInputFilter("[.0-9]");
 		TotalPrice.setAlignment(Align::Right);
 		TotalPrice.addCallback("focus-out",this,&RLine::cb_setprecision,&TotalPrice);
 		TotalPrice.addCallback("focus-in",this,&RLine::cb_calculate,&TotalPrice);
-		posx+=12;
+	}
+	void adjustSize() override
+	{
+		int posx = 1;
+		int posy = 1;
+		int gap=2;
+		size_t sizex = 1;
+		size_t sizey = 1;
+		const auto& parent = getParentWidget();
+		std::string a = parent->getClassName().toString();
+		auto totalwidth = parent->getWidth() ;
+		sizex = int((totalwidth/5)-gap);
+		Product.setGeometry(FPoint{posx,posy},FSize{sizex*2,sizey});
+		posx += sizex * 2 + 2; 
+		Quantity.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
+		posx += sizex + 2; 
+		UnitPrice.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
+		posx += sizex + 2; 
+		TotalPrice.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
+		this->redraw();
 	}
 
 	void cb_calculate(FLineEdit* e)
@@ -72,29 +82,89 @@ class RLine : public FWidget
 	{
 		e->setText(e->getText().toUpper());
 	}
+
+	void onFocusIn (FFocusEvent* in_ev) override
+	{
+		// Sets the focus to a child widget if it exists
+		if ( ! hasChildren() ) FWidget::onFocusIn(in_ev);
+		if ( in_ev->getFocusType() == FocusTypes::NextWidget ) { focusFirstChild() ? in_ev->accept() : in_ev->ignore(); }
+		else if ( in_ev->getFocusType() == FocusTypes::PreviousWidget ) { focusLastChild() ? in_ev->accept() : in_ev->ignore(); }
+	}
+
 	//Change the behaviour when a child loses its focus
 	//Will be used to calculate to totalprice of the receipt
 	void onChildFocusOut (FFocusEvent * out_ev) override
 	{
-		const auto focus_Widget = FWidget::getFocusWidget();
-  		if ( out_ev->getFocusType() == FocusTypes::NextWidget )
-		{	
-		    const auto& last_widget = getLastFocusableWidget(getChildren());
-    			if ( focus_Widget == last_widget )
+		const auto& focus = FWidget::getFocusWidget();
+		if ( out_ev->getFocusType() == FocusTypes::NextWidget )
 			{
-				out_ev->accept();
-				emitCallback("end-of-row");
+			const auto& last_widget = getLastFocusableWidget(getChildren());
+			if ( focus != last_widget ) return;
+			out_ev->accept();
+			focusNextChild();
+			emitCallback("end-of-row");
 			}
-		}
 		else if ( out_ev->getFocusType() == FocusTypes::PreviousWidget )
-		{
-			const auto& first_widget = getFirstFocusableWidget(getChildren());
-			if ( focus_Widget == first_widget )
 			{
-				out_ev->accept();
-				focusPrevChild();
+			const auto& first_widget = getFirstFocusableWidget(getChildren());
+			if ( focus != first_widget ) return;
+			out_ev->accept();
+			focusPrevChild();
 			}
+	}
+
+	//copy past from final::fwidget.cpp and added some debugging
+	auto searchForwardForWidget ( const FWidget* parent , const FWidget* widget ) const -> FObjectList::const_iterator
+	{
+		auto iter = parent->cbegin();
+		const auto last = parent->cend();
+		while ( iter != last )  // Search forward for this widget
+			{
+			if ( ! (*iter)->isWidget() )  // Skip non-widget elements
+				{
+				++iter;
+				continue;
+				}
+			if ( static_cast<FWidget*>(*iter) == widget )
+				{
+				break;  // Stop search when we reach this widget
+				}
+			++iter;
+			}
+		return iter;
+	}
+
+	//Overriding  this function to get out of the ScrollView by calling the grandparent when reaching last RLine
+	//Probably there is an more elegant way to do this
+	auto focusNextChild() -> bool
+	{
+		if ( isDialogWidget() || ! hasParent() ) return false;
+		const auto& parent = getParentWidget();
+		if ( ! parent || ! parent->hasChildren() || parent->numOfFocusableChildren() < 1 ) return false;
+		FWidget* next = nullptr;
+		constexpr auto ft = FocusTypes::NextWidget;
+		auto iter = searchForwardForWidget(parent, this);
+		auto iter_of_this_widget = iter;
+		do  // Search the next focusable widget
+			{
+			++iter;
+			if ( iter == parent->cend() )
+				{
+				iter = parent->cbegin();
+				const auto& grandparent = parent->getParentWidget();
+				parent->setFocus();
+				grandparent->focusNextChild();
+				return parent ? parent->setFocus(true,ft) : false;
+				}
+			if ( (*iter)->isWidget() ) next = static_cast<FWidget*>(*iter);
+		} while ( iter != iter_of_this_widget && canReceiveFocus(next) );
+		// Change focus to the next widget and return true if successful
+		return next ? next->setFocus (true, ft) : false;
 		}
+
+		auto canReceiveFocus (const FWidget* widget) const -> bool
+		{
+		return ! widget || ! widget->isEnabled() || ! widget->acceptFocus() || ! widget->isShown() || widget->isWindowWidget();
 	}
 };
 //--------------------------------------------------------------------------------------------------
@@ -133,10 +203,11 @@ class ReceiptForm : public FDialog
 
 		void initLayout() override
 		{
+		this->setResizeable();
 		frame_ReceiptDetail.setText("Register");
 		frame_ReceiptDetail.setPos(FPoint{1,2});
 		frame_ReceiptDetail.setSize(FSize{80,30});
-		frame_ReceiptDetail.setScrollSize(FSize{70,100});
+		frame_ReceiptDetail.setScrollSize(FSize{200,200});
 		frame_ReceiptDetail.setColor(FColor::Blue,FColor::White);
 		frame_ReceiptDetail.clearArea();
 
@@ -160,7 +231,6 @@ class ReceiptForm : public FDialog
 		BtnQuit.setGeometry(FPoint{70,32},FSize{14,1});
 		BtnQuit.addCallback("clicked",this,&ReceiptForm::cb_quit);
 
-		Lines[0]->Product.setFocus();
 		this->redraw();
 		}
 	void insertLines()
@@ -168,8 +238,9 @@ class ReceiptForm : public FDialog
 		for(int i=1;i<=maxlines;i++)
 		{
 		 auto l = new RLine(&frame_ReceiptDetail);
+		l->RowId = i;
 		l->addCallback("end-of-row",this,&ReceiptForm::cb_rowchange);
-		l->setGeometry(FPoint{2,2*i+1},FSize{135,1});
+		l->setGeometry(FPoint{1,2*i+1},FSize{135,1});
 		l->show();
 		Lines.push_back(l);
 		}
@@ -177,22 +248,10 @@ class ReceiptForm : public FDialog
 
 	void addHeaderLabels()
 	{
-		int posx=1;	
-		int posy=1;
-		unsigned long int sizex = 10;
-		unsigned long int sizey = 1;
 		ColumnName1.setText("Product");
 		ColumnName2.setText("Quantity");
 		ColumnName3.setText("Unit Price");
 		ColumnName4.setText("Total Price");
-
-		ColumnName1.setGeometry(FPoint{posx,posy},FSize{sizex*2,sizey});
-		posx+=sizex*2+2;
-		ColumnName2.setGeometry(FPoint{posx,posy},FSize{sizex*2,sizey});
-		posx+=sizex+2;
-		ColumnName3.setGeometry(FPoint{posx,posy},FSize{sizex*2,sizey});
-		posx+=sizex+2;
-		ColumnName4.setGeometry(FPoint{posx,posy},FSize{sizex*2,sizey});
 	}
 	
 	void cb_quit()
@@ -236,62 +295,77 @@ class ReceiptForm : public FDialog
 		file_out.close();
 		std::system("./printreceipt.sh");
 	}	
-// Same cb_rowchange function but this one uses index to loop over the vector
-// Just to show the possibility
-//	void cb_rowchange()
-//	{
-//		long unsigned int j = Lines.size();
-//		for (long unsigned int i =0 ; i < j ; i++)
-//		{
-//			if(Lines[i]->TotalPrice.hasFocus())
-//			{ 	
-//				if ( i == j-1)
-//				{
-//				Lines[0]->Product.setFocus();
-//				Lines[0]->redraw();
-//				i=j;
-//				}
-//				else
-//				{
-//				Lines[(i+1)]->Product.setFocus();
-//				Lines[(i+1)]->redraw();
-//				i=j;
-//				}
-//			}
-//		}
-//		cb_sum();
-//			
-//	}
-//
 
 //This function uses iterators to loop over the vector
 	void cb_rowchange()
 	{
-	auto j = Lines.begin();
-		for (auto i = Lines.begin() ; i != Lines.end() ; ++i)
-		{
-			if ((*i)->TotalPrice.hasFocus())
-			{ 	
-				if ( i == (Lines.end())-1)
-				{
-				(*Lines.begin())->Product.setFocus();
-				(*j)->redraw();
-				break;
-				}
-				else
-				{
-				i++;
-				(*i)->Product.setFocus();
-				(*i)->redraw();
-				break;
-				}
-			}
-		}
-		
 		cb_sum(); //callback to cb_sum to update the total of the receipt , this makes the Total button unnecessary
-			
+	}
+
+	void centerDialog()
+	{
+		auto x = int((getDesktopWidth() - getWidth()) / 2);
+		auto y = int((getDesktopHeight() - getHeight()) / 2);
+		checkMinValue(x);
+		checkMinValue(y);
+		setPos (FPoint{x, y}, false);
+	}
+
+	void checkMinValue (int& n)
+	{
+		if ( n < 1 ) n = 1 ;
 	}
 	
+	void adjustSize() override
+	{
+	FDialog::adjustSize();
+	this->centerDialog();
+	this->adjustWidgets();	
+	}
+
+	void adjustWidgets()
+	{
+		auto bx = int(getWidth() - 5);
+		auto by = int(getHeight() - 6);
+		frame_ReceiptDetail.setWidth(bx);
+		frame_ReceiptDetail.setHeight(by);
+		frame_ReceiptDetail.setScrollWidth(bx - 3);
+		frame_ReceiptDetail.setScrollHeight(100);
+		frame_ReceiptDetail.setColor(FColor::Blue,FColor::White);
+		frame_ReceiptDetail.clearArea();
+		frame_ReceiptDetail.redraw();
+		
+
+		int posx=3;	
+		int posy=1;
+		int gap=2;
+		unsigned long int sizex = 1;
+		unsigned long int sizey = 1;
+		auto totalwidth = frame_ReceiptDetail.getWidth() ;
+		sizex = int((totalwidth/5-gap));
+		
+		ColumnName1.setGeometry(FPoint{posx,posy},FSize{sizex*2,sizey});
+		posx+=sizex*2+2;
+		ColumnName2.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
+		posx+=sizex+2;
+		ColumnName3.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
+		posx+=sizex+2;
+		ColumnName4.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
+		posy = 1;
+		for ( auto l : Lines)
+		{
+			l->setGeometry(FPoint{1,2*posy+1},FSize{totalwidth-5,1});
+			posy++;
+		}
+	//Align at the bottom the following widgets
+		by = int(getHeight()-3);
+		ReceiptTotal.setY(by);
+		BtnTotal.setY(by);
+		BtnPrint.setY(by);
+		BtnQuit.setY(by);
+
+	}	
+
 };
 
 
