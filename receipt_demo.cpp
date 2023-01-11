@@ -39,23 +39,22 @@ class RLine : public FWidget
 		TotalPrice.addCallback("focus-in",this,&RLine::cb_calculate,&TotalPrice);
 		this->redraw();
 	}
-	void adjustSize() 
+	void draw() override
 	{
-		int posx{1};
+		int posx{2};
 		int posy{1};
 		int gap=2;
 		size_t sizex = 1;
 		size_t sizey = 1;
 		const auto& parent = getParentWidget();
-		std::string a = parent->getClassName().toString();
-		auto totalwidth = parent->getWidth() ;
+		auto totalwidth = parent->getWidth()-gap ;
 		sizex = int((totalwidth/5)-gap);
 		Product.setGeometry(FPoint{posx,posy},FSize{sizex*2,sizey});
-		posx += sizex * 2 + 2; 
+		posx += sizex * 2 + gap; 
 		Quantity.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
-		posx += sizex + 2; 
+		posx += sizex + gap;
 		UnitPrice.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
-		posx += sizex + 2; 
+		posx += sizex + gap; 
 		TotalPrice.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
 	}
 
@@ -335,15 +334,15 @@ class ReceiptForm : public FDialog
 		int gap=2;
 		unsigned long int sizex = 1;
 		unsigned long int sizey = 1;
-		auto totalwidth = frame_ReceiptDetail.getWidth() ;
+		auto totalwidth = frame_ReceiptDetail.getWidth()-gap ;
 		sizex = int((totalwidth/5-gap));
 		
 		ColumnName1->setGeometry(FPoint{posx,posy},FSize{sizex*2,sizey});
-		posx+=sizex*2+2;
+		posx+=sizex*2+gap;
 		ColumnName2->setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
-		posx+=sizex+2;
+		posx+=sizex+gap;
 		ColumnName3->setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
-		posx+=sizex+2;
+		posx+=sizex+gap;
 		ColumnName4->setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
 		posy = 2;
 		for ( auto l : Lines)
