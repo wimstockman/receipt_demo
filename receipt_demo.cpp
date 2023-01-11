@@ -37,11 +37,12 @@ class RLine : public FWidget
 		TotalPrice.setAlignment(Align::Right);
 		TotalPrice.addCallback("focus-out",this,&RLine::cb_setprecision,&TotalPrice);
 		TotalPrice.addCallback("focus-in",this,&RLine::cb_calculate,&TotalPrice);
+		this->redraw();
 	}
-	void adjustSize() override
+	void adjustSize() 
 	{
-		int posx = 1;
-		int posy = 1;
+		int posx{1};
+		int posy{1};
 		int gap=2;
 		size_t sizex = 1;
 		size_t sizey = 1;
@@ -56,7 +57,6 @@ class RLine : public FWidget
 		UnitPrice.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
 		posx += sizex + 2; 
 		TotalPrice.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
-		this->redraw();
 	}
 
 	void cb_calculate(FLineEdit* e)
@@ -179,13 +179,10 @@ class ReceiptForm : public FDialog
 	public:
 		explicit ReceiptForm (FWidget *parent):FDialog{parent} 
 			{
-			posx=8; posy=1;
-			sizex=30; sizey=1;
+			this->setResizeable();
 			}
 		int maxlines = 25;
 
-		int posx,posy;
-		unsigned long int sizex,sizey;
 		FScrollView frame_ReceiptDetail{this};
 		std::vector<RLine*> Lines;
 
@@ -196,14 +193,13 @@ class ReceiptForm : public FDialog
 		FButton BtnQuit{this};
 		
 		//Set Headers for the columns;
-		FLabel ColumnName1{&frame_ReceiptDetail}; 
-		FLabel ColumnName2{&frame_ReceiptDetail}; 
-		FLabel ColumnName3{&frame_ReceiptDetail}; 
-		FLabel ColumnName4{&frame_ReceiptDetail}; 
+		FLabel* ColumnName1 = new FLabel{&frame_ReceiptDetail}; 
+		FLabel* ColumnName2 = new FLabel{&frame_ReceiptDetail}; 
+		FLabel* ColumnName3 = new FLabel{&frame_ReceiptDetail}; 
+		FLabel* ColumnName4 = new FLabel{&frame_ReceiptDetail}; 
 
 		void initLayout() override
 		{
-		this->setResizeable();
 		frame_ReceiptDetail.setText("Register");
 		frame_ReceiptDetail.setPos(FPoint{1,2});
 		frame_ReceiptDetail.setSize(FSize{80,30});
@@ -240,7 +236,6 @@ class ReceiptForm : public FDialog
 		 auto l = new RLine(&frame_ReceiptDetail);
 		l->RowId = i;
 		l->addCallback("end-of-row",this,&ReceiptForm::cb_rowchange);
-		l->setGeometry(FPoint{1,2*i+1},FSize{135,1});
 		l->show();
 		Lines.push_back(l);
 		}
@@ -248,10 +243,10 @@ class ReceiptForm : public FDialog
 
 	void addHeaderLabels()
 	{
-		ColumnName1.setText("Product");
-		ColumnName2.setText("Quantity");
-		ColumnName3.setText("Unit Price");
-		ColumnName4.setText("Total Price");
+		ColumnName1->setText("Product");
+		ColumnName2->setText("Quantity");
+		ColumnName3->setText("Unit Price");
+		ColumnName4->setText("Total Price");
 	}
 	
 	void cb_quit()
@@ -333,7 +328,6 @@ class ReceiptForm : public FDialog
 		frame_ReceiptDetail.setScrollHeight(100);
 		frame_ReceiptDetail.setColor(FColor::Blue,FColor::White);
 		frame_ReceiptDetail.clearArea();
-		frame_ReceiptDetail.redraw();
 		
 
 		int posx=3;	
@@ -344,18 +338,18 @@ class ReceiptForm : public FDialog
 		auto totalwidth = frame_ReceiptDetail.getWidth() ;
 		sizex = int((totalwidth/5-gap));
 		
-		ColumnName1.setGeometry(FPoint{posx,posy},FSize{sizex*2,sizey});
+		ColumnName1->setGeometry(FPoint{posx,posy},FSize{sizex*2,sizey});
 		posx+=sizex*2+2;
-		ColumnName2.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
+		ColumnName2->setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
 		posx+=sizex+2;
-		ColumnName3.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
+		ColumnName3->setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
 		posx+=sizex+2;
-		ColumnName4.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
-		posy = 1;
+		ColumnName4->setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
+		posy = 2;
 		for ( auto l : Lines)
 		{
-			l->setGeometry(FPoint{1,2*posy+1},FSize{totalwidth-5,1});
-			posy++;
+			l->setGeometry(FPoint{1,posy},FSize{totalwidth-5,1});
+			posy+=2;
 		}
 	//Align at the bottom the following widgets
 		by = int(getHeight()-3);
