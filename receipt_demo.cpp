@@ -96,74 +96,28 @@ class RLine : public FWidget
 	{
 		const auto& focus = FWidget::getFocusWidget();
 		if ( out_ev->getFocusType() == FocusTypes::NextWidget )
-			{
+		{
 			const auto& last_widget = getLastFocusableWidget(getChildren());
-			if ( focus != last_widget ) return;
-			out_ev->accept();
-			focusNextChild();
-			emitCallback("end-of-row");
-			}
-		else if ( out_ev->getFocusType() == FocusTypes::PreviousWidget )
+			if ( focus != last_widget ) { return ;}
+			else 
 			{
+				this->setFocus(); // Reset Focus to the RLine Widget so the Parent widget can check if it is the latest row 
+				out_ev->accept();
+				focusNextChild();
+				emitCallback("end-of-row");
+			}
+		}
+		else if ( out_ev->getFocusType() == FocusTypes::PreviousWidget )
+		{
 			const auto& first_widget = getFirstFocusableWidget(getChildren());
-			if ( focus != first_widget ) return;
+			if ( focus != first_widget ) return ;
+			else
+			{
+			this->setFocus(); // Reset Focus to the RLine Widget himself so the Parent Widget can check if it is the first row 
 			out_ev->accept();
 			focusPrevChild();
 			}
-	}
-
-	//copy past from final::fwidget.cpp and added some debugging
-	auto searchForwardForWidget ( const FWidget* parent , const FWidget* widget ) const -> FObjectList::const_iterator
-	{
-		auto iter = parent->cbegin();
-		const auto last = parent->cend();
-		while ( iter != last )  // Search forward for this widget
-			{
-			if ( ! (*iter)->isWidget() )  // Skip non-widget elements
-				{
-				++iter;
-				continue;
-				}
-			if ( static_cast<FWidget*>(*iter) == widget )
-				{
-				break;  // Stop search when we reach this widget
-				}
-			++iter;
-			}
-		return iter;
-	}
-
-	//Overriding  this function to get out of the ScrollView by calling the grandparent when reaching last RLine
-	//Probably there is an more elegant way to do this
-	auto focusNextChild() -> bool
-	{
-		if ( isDialogWidget() || ! hasParent() ) return false;
-		const auto& parent = getParentWidget();
-		if ( ! parent || ! parent->hasChildren() || parent->numOfFocusableChildren() < 1 ) return false;
-		FWidget* next = nullptr;
-		constexpr auto ft = FocusTypes::NextWidget;
-		auto iter = searchForwardForWidget(parent, this);
-		auto iter_of_this_widget = iter;
-		do  // Search the next focusable widget
-			{
-			++iter;
-			if ( iter == parent->cend() )
-				{
-				iter = parent->cbegin();
-				const auto& grandparent = parent->getParentWidget();
-				parent->setFocus();
-				grandparent->focusNextChild();
-				return parent ? parent->setFocus(true,ft) : false;
-				}
-			if ( (*iter)->isWidget() ) next = static_cast<FWidget*>(*iter);
-		} while ( iter != iter_of_this_widget && canReceiveFocus(next) );
-		// Change focus to the next widget and return true if successful
-		return next ? next->setFocus (true, ft) : false;
 		}
-
-		auto canReceiveFocus (const FWidget* widget) const -> bool
-		{
-		return ! widget || ! widget->isEnabled() || ! widget->acceptFocus() || ! widget->isShown() || widget->isWindowWidget();
 	}
 };
 //--------------------------------------------------------------------------------------------------
@@ -180,7 +134,7 @@ class ReceiptForm : public FDialog
 			{
 			this->setResizeable();
 			}
-		int maxlines = 25;
+		int maxlines = 20;
 
 		FScrollView frame_ReceiptDetail{this};
 		std::vector<RLine*> Lines;
@@ -324,7 +278,7 @@ class ReceiptForm : public FDialog
 		frame_ReceiptDetail.setWidth(bx);
 		frame_ReceiptDetail.setHeight(by);
 		frame_ReceiptDetail.setScrollWidth(bx - 3);
-		frame_ReceiptDetail.setScrollHeight(100);
+		frame_ReceiptDetail.setScrollHeight(maxlines * 2 );
 		frame_ReceiptDetail.setColor(FColor::Blue,FColor::White);
 		frame_ReceiptDetail.clearArea();
 		
