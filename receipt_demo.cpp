@@ -57,6 +57,10 @@ class RLine : public FWidget
 		posx += sizex + gap; 
 		TotalPrice.setGeometry(FPoint{posx,posy},FSize{sizex,sizey});
 	}
+	bool event(FEvent* ev) override
+	{
+		return FWidget::event(ev);   // for RLine
+	}
 
 	void cb_calculate(FLineEdit* e)
 	{
@@ -181,6 +185,10 @@ class ReceiptForm : public FDialog
 		BtnQuit.addCallback("clicked",this,&ReceiptForm::cb_quit);
 
 		this->redraw();
+		}
+	bool event(FEvent* ev) override
+		{
+		return FDialog::event(ev);   // for ReceiptForm
 		}
 	void insertLines()
 	{
